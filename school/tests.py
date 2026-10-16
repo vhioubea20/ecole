@@ -415,3 +415,34 @@ class SchoolAccessTests(TestCase):
         response = self.client.post(reverse("student_payment_delete", args=[payment.pk]))
         self.assertRedirects(response, reverse("student_payment_detail", args=[student.pk]))
         self.assertFalse(StudentPayment.objects.filter(pk=payment.pk).exists())
+
+    def test_staff_can_download_payment_receipt_as_pdf(self):
+        school_class = SchoolClass.objects.create(libelle="CP")
+        student = Student.objects.create(first_name="Awa", last_name="Diallo", school_class=school_class)
+        payment = StudentPayment.objects.create(
+            student=student,
+            date_paiement=date(2026, 10, 16),
+            montant="25000.00",
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("student_payment_receipt", args=[payment.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertTrue(response.content.startswith(b"%PDF-"))
+        self.assertIn(f"recu-paiement-{payment.pk:06d}.pdf", response["Content-Disposition"])
+
+    def test_user_without_payment_permission_cannot_download_receipt(self):
+        school_class = SchoolClass.objects.create(libelle="CP")
+        student = Student.objects.create(first_name="Ali", last_name="Traore", school_class=school_class)
+        payment = StudentPayment.objects.create(
+            student=student,
+            date_paiement=date(2026, 10, 16),
+            montant="10000.00",
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(reverse("student_payment_receipt", args=[payment.pk]))
+
+        self.assertEqual(response.status_code, 302)

@@ -13,6 +13,7 @@ from django.utils import timezone
 from .forms import SchoolClassForm, SchoolFeeForm, StudentForm, StudentPaymentForm, UserCreateForm, UserUpdateForm
 from .exports import build_school_workbook
 from .models import SchoolClass, SchoolFee, Student, StudentPayment
+from .receipts import build_payment_receipt
 from .services import school_year_data
 
 User = get_user_model()
@@ -316,6 +317,20 @@ def student_payment_detail(request, pk):
             "can_delete_payment": request.user.is_staff or request.user.has_perm("school.delete_studentpayment"),
         },
     )
+
+
+@school_permission_required("view_studentpayment")
+def student_payment_receipt(request, pk):
+    payment = get_object_or_404(
+        StudentPayment.objects.select_related("student", "student__school_class"),
+        pk=pk,
+    )
+    response = HttpResponse(
+        build_payment_receipt(payment),
+        content_type="application/pdf",
+    )
+    response["Content-Disposition"] = f'inline; filename="recu-paiement-{payment.pk:06d}.pdf"'
+    return response
 
 
 @school_permission_required("add_studentpayment")

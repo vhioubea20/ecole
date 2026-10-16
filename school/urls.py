@@ -17,6 +17,7 @@ urlpatterns = [
         path("scolarite/", views.schooling_overview, name="schooling_overview"),
         path("scolarite/classes/<int:pk>/", views.schooling_class_detail, name="schooling_class_detail"),
         path("scolarite/eleves/<int:pk>/", views.student_payment_detail, name="student_payment_detail"),
+        path("paiements/<int:pk>/recu.pdf", views.student_payment_receipt, name="student_payment_receipt"),
         path("paiements/ajouter/", views.student_payment_create, name="student_payment_create"),
         path("paiements/<int:pk>/modifier/", views.student_payment_update, name="student_payment_update"),
         path("paiements/<int:pk>/supprimer/", views.student_payment_delete, name="student_payment_delete"),
