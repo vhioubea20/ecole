@@ -7,6 +7,7 @@ urlpatterns = [
     path("connexion/", auth_views.LoginView.as_view(template_name="school/login.html"), name="login"),
     path("deconnexion/", views.logout_view, name="logout"),
     path("", views.dashboard, name="dashboard"),
+    path("export/excel/", views.export_all_excel, name="export_all_excel"),
     path("classes/", views.class_list, name="class_list"),
     path("classes/ajouter/", views.class_create, name="class_create"),
     path("classes/<int:pk>/modifier/", views.class_update, name="class_update"),

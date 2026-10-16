@@ -5,10 +5,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Count, DecimalField, Q, Sum, Value
 from django.db.models.functions import Coalesce
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django.utils import timezone
 
 from .forms import SchoolClassForm, SchoolFeeForm, StudentForm, StudentPaymentForm, UserCreateForm, UserUpdateForm
+from .exports import build_school_workbook
 from .models import SchoolClass, SchoolFee, Student, StudentPayment
 from .services import school_year_data
 
@@ -35,6 +38,18 @@ def dashboard(request):
         "recent_students": Student.objects.filter(status=Student.Status.ACTIVE)[:5],
     }
     return render(request, "school/dashboard.html", context)
+
+
+@login_required
+@staff_required
+def export_all_excel(request):
+    response = HttpResponse(
+        build_school_workbook(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    filename = f"gestion_scolaire_{timezone.localdate():%Y%m%d}.xlsx"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @school_permission_required("view_student")

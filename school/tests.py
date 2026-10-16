@@ -1,10 +1,12 @@
 from datetime import date
 from decimal import Decimal
+from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
+from openpyxl import load_workbook
 
 from .forms import SchoolClassForm, SchoolFeeForm, StudentForm, StudentPaymentForm, UserCreateForm, UserUpdateForm
 from .models import SchoolClass, SchoolFee, Student, StudentPayment, UserProfile
@@ -22,6 +24,40 @@ class SchoolAccessTests(TestCase):
     def test_dashboard_requires_authentication(self):
         response = self.client.get(reverse("dashboard"))
         self.assertRedirects(response, f"{reverse('login')}?next={reverse('dashboard')}")
+
+    def test_staff_can_export_all_tables_without_password_data(self):
+        school_class = SchoolClass.objects.create(libelle="CP")
+        student = Student.objects.create(first_name="Awa", last_name="Diallo", school_class=school_class)
+        year = SchoolFeeForm().fields["annee"].choices[0][0]
+        SchoolFee.objects.create(
+            school_class=school_class,
+            annee=year,
+            nature=SchoolFee.Nature.TUITION,
+            montant="90000.00",
+        )
+        StudentPayment.objects.create(student=student, date_paiement=date(2026, 10, 15), montant="10000.00")
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("export_all_excel"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        workbook = load_workbook(BytesIO(response.content), read_only=True, data_only=True)
+        self.assertEqual(workbook.sheetnames, ["Élèves", "Classes", "Frais", "Paiements", "Utilisateurs", "Profils"])
+        user_headers = next(workbook["Utilisateurs"].iter_rows(values_only=True))
+        self.assertNotIn("Mot de passe", user_headers)
+        self.assertNotIn("password", user_headers)
+        self.assertEqual(workbook["Élèves"].max_row, 2)
+
+    def test_regular_user_cannot_export_all_tables(self):
+        self.client.force_login(self.member)
+
+        response = self.client.get(reverse("export_all_excel"))
+
+        self.assertEqual(response.status_code, 302)
 
     def test_login_page_loads_password_visibility_control(self):
         response = self.client.get(reverse("login"))

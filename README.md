@@ -11,6 +11,7 @@ Application web Django en français pour suivre les élèves et gérer les accè
 - Gestion des classes (création, modification, suppression); la suppression est bloquée si des élèves y sont inscrits.
 - Gestion des frais par classe et année scolaire: un montant d'inscription et un montant de scolarité au maximum pour chaque couple classe/année.
 - Suivi de scolarité par classe avec échéances d'octobre à juin, historique individuel et gestion des paiements.
+- Export Excel complet des élèves, classes, frais, paiements, utilisateurs et profils, réservé au personnel.
 - Gestion des comptes, des rôles et de leur activation, réservée au personnel.
 - Rôle Admin avec tous les droits; permissions scolaires sélectionnables pour les comptes Utilisateur; photo de profil et courriel facultatif.
 - Interface responsive et administration Django disponible sous `/admin/`.

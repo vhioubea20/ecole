@@ -51,6 +51,7 @@ button, a, select { touch-action: manipulation; }
 .topbar-date { font-size: 12px; color: var(--muted); text-transform: capitalize; }
 .page-content { width: min(1120px, 100%); margin: 0 auto; padding: 39px 42px 55px; flex: 1; }
 .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
+.heading-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .page-heading h1, .auth-copy h1 { font-family: Georgia, serif; letter-spacing: 0; }
 .page-heading h1 { font-size: 30px; line-height: 1.2; margin: 5px 0 0; }
 .eyebrow { color: var(--green); margin: 0; }
