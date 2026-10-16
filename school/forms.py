@@ -42,10 +42,11 @@ class SchoolFeeForm(forms.ModelForm):
 
     class Meta:
         model = SchoolFee
-        fields = ["annee", "school_class", "nature", "montant"]
+        fields = ["annee", "school_class", "nature", "mode", "montant"]
         labels = {
             "school_class": "Classe",
             "nature": "Nature",
+            "mode": "Mode de facturation",
             "montant": "Montant",
         }
         widgets = {
@@ -63,6 +64,16 @@ class SchoolFeeForm(forms.ModelForm):
         if self.instance.pk and self.instance.annee not in dict(years):
             years.insert(0, (self.instance.annee, self.instance.annee))
         self.fields["annee"].choices = years
+        self.fields["mode"].help_text = "Pour les frais d'inscription, le mode doit rester annuel."
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (
+            cleaned_data.get("nature") == SchoolFee.Nature.REGISTRATION
+            and cleaned_data.get("mode") != SchoolFee.Mode.ANNUAL
+        ):
+            self.add_error("mode", "Les frais d'inscription sont facturés annuellement.")
+        return cleaned_data
 
 
 class StudentChoiceField(forms.ModelChoiceField):

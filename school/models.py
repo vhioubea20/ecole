@@ -22,6 +22,10 @@ class SchoolFee(models.Model):
         REGISTRATION = "inscription", "Inscription"
         TUITION = "scolarite", "Frais de scolarité"
 
+    class Mode(models.TextChoices):
+        ANNUAL = "annuel", "Annuel"
+        MONTHLY = "mensuel", "Mensuel"
+
     school_class = models.ForeignKey(
         SchoolClass,
         on_delete=models.PROTECT,
@@ -30,6 +34,7 @@ class SchoolFee(models.Model):
     )
     annee = models.CharField("année scolaire", max_length=9)
     nature = models.CharField("nature", max_length=16, choices=Nature.choices, default=Nature.TUITION)
+    mode = models.CharField("mode", max_length=8, choices=Mode.choices, default=Mode.ANNUAL)
     montant = models.DecimalField("montant", max_digits=10, decimal_places=2)
 
     class Meta:
@@ -40,7 +45,11 @@ class SchoolFee(models.Model):
             models.UniqueConstraint(
                 fields=["school_class", "annee", "nature"],
                 name="unique_fee_per_class_year_nature",
-            )
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(nature="inscription", mode="mensuel"),
+                name="registration_fee_must_be_annual",
+            ),
         ]
 
     def __str__(self):

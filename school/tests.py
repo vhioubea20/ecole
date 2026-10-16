@@ -218,6 +218,7 @@ class SchoolAccessTests(TestCase):
                 "school_class": school_class.pk,
                 "annee": year,
                 "nature": SchoolFee.Nature.TUITION,
+                "mode": SchoolFee.Mode.ANNUAL,
                 "montant": "120000.00",
             }
         )
@@ -258,6 +259,7 @@ class SchoolAccessTests(TestCase):
                 "school_class": school_class.pk,
                 "annee": year,
                 "nature": SchoolFee.Nature.TUITION,
+                "mode": SchoolFee.Mode.ANNUAL,
                 "montant": "120000.00",
             }
         )
@@ -282,6 +284,7 @@ class SchoolAccessTests(TestCase):
                 "school_class": school_class.pk,
                 "annee": year,
                 "nature": SchoolFee.Nature.TUITION,
+                "mode": SchoolFee.Mode.ANNUAL,
                 "montant": "100000.00",
             },
         )
@@ -294,6 +297,7 @@ class SchoolAccessTests(TestCase):
                 "school_class": school_class.pk,
                 "annee": year,
                 "nature": SchoolFee.Nature.TUITION,
+                "mode": SchoolFee.Mode.ANNUAL,
                 "montant": "125000.00",
             },
         )
@@ -361,6 +365,71 @@ class SchoolAccessTests(TestCase):
         self.assertEqual(response.context["total_due"], Decimal("200000.00"))
         self.assertEqual(response.context["total_paid"], Decimal("10000.00"))
 
+    def test_monthly_tuition_is_multiplied_by_nine_in_annual_bilan(self):
+        year = school_year_data()
+        school_class = SchoolClass.objects.create(libelle="CE2")
+        SchoolFee.objects.create(
+            school_class=school_class,
+            annee=year["school_year"],
+            nature=SchoolFee.Nature.TUITION,
+            mode=SchoolFee.Mode.MONTHLY,
+            montant="10000.00",
+        )
+        Student.objects.create(first_name="Mina", last_name="Keita", school_class=school_class)
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("schooling_overview"))
+
+        self.assertEqual(response.context["class_rows"][0]["tuition_fee"], Decimal("90000.00"))
+        self.assertEqual(response.context["total_due"], Decimal("90000.00"))
+
+    def test_payments_allocate_from_october_and_registration_is_added_to_first_month(self):
+        year = school_year_data()
+        school_class = SchoolClass.objects.create(libelle="CE2")
+        SchoolFee.objects.create(
+            school_class=school_class,
+            annee=year["school_year"],
+            nature=SchoolFee.Nature.REGISTRATION,
+            montant="5000.00",
+        )
+        SchoolFee.objects.create(
+            school_class=school_class,
+            annee=year["school_year"],
+            nature=SchoolFee.Nature.TUITION,
+            mode=SchoolFee.Mode.MONTHLY,
+            montant="10000.00",
+        )
+        student = Student.objects.create(first_name="Mina", last_name="Keita", school_class=school_class)
+        StudentPayment.objects.create(
+            student=student,
+            date_paiement=date(year["start_year"], 12, 15),
+            montant="18000.00",
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("schooling_class_detail", args=[school_class.pk]))
+
+        months = response.context["students"][0]["monthly_payments"]
+        self.assertEqual(months[0], {"amount": Decimal("15000.00"), "state": "paid"})
+        self.assertEqual(months[1], {"amount": Decimal("3000.00"), "state": "partial"})
+        self.assertEqual(months[2], {"amount": Decimal("0.00"), "state": "unpaid"})
+
+    def test_monthly_mode_is_only_valid_for_tuition(self):
+        school_class = SchoolClass.objects.create(libelle="CP")
+        year = SchoolFeeForm().fields["annee"].choices[0][0]
+
+        form = SchoolFeeForm(
+            data={
+                "school_class": school_class.pk,
+                "annee": year,
+                "nature": SchoolFee.Nature.REGISTRATION,
+                "mode": SchoolFee.Mode.MONTHLY,
+                "montant": "10000.00",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+
     def test_class_and_student_details_show_monthly_and_payment_history(self):
         year = school_year_data()
         school_class = SchoolClass.objects.create(libelle="CP")
@@ -388,7 +457,10 @@ class SchoolAccessTests(TestCase):
         student_response = self.client.get(reverse("student_payment_detail", args=[student.pk]))
 
         self.assertEqual(len(class_response.context["months"]), 9)
-        self.assertEqual(class_response.context["students"][0]["monthly_amounts"][0], Decimal("10000.00"))
+        monthly_payments = class_response.context["students"][0]["monthly_payments"]
+        self.assertEqual(monthly_payments[0]["amount"], Decimal("10000.00"))
+        self.assertEqual(monthly_payments[0]["state"], "partial")
+        self.assertEqual(monthly_payments[1]["state"], "unpaid")
         self.assertEqual(class_response.context["annual_fee"], Decimal("100000.00"))
         self.assertEqual(student_response.context["total_paid"], Decimal("10000.00"))
         self.assertEqual(student_response.context["amount_due"], Decimal("100000.00"))

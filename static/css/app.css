@@ -95,6 +95,15 @@ td .cell-sub { display: block; font-size: 10px; color: #89948e; margin-top: 3px;
 .breadcrumb span { color: #a7b2b7; }
 .student-detail-link { display: inline-block; }
 .payment-grid { min-width: 1380px; }
+.month-paid { color: #101b20; background: #f0f4f2; font-weight: 700; }
+.month-partial { color: #a85c00; background: #fff0d2; font-weight: 700; }
+.month-unpaid { color: transparent; background: #fff; }
+.monthly-legend { display: flex; flex-wrap: wrap; gap: 15px; margin: 0 0 12px; color: var(--muted); font-size: 11px; }
+.monthly-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend-dot { width: 11px; height: 11px; border: 1px solid var(--line); border-radius: 50%; }
+.paid-dot { background: #101b20; }
+.partial-dot { background: #e59329; border-color: #e59329; }
+.unpaid-dot { background: #fff; }
 table tfoot th { border-top: 1px solid var(--line); background: #f0f4f3; color: var(--ink); }
 .icon-action { width: 29px; height: 29px; border: 1px solid var(--line); border-radius: 4px; display: grid; place-items: center; color: #506158; font-size: 16px; }
 .icon-action:hover { background: #f4f7f4; border-color: #bdc9c1; }

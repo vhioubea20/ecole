@@ -1,7 +1,9 @@
 from datetime import date
+from decimal import Decimal
 
 from django.utils import timezone
 
+from .models import SchoolFee
 
 MONTH_LABELS = {
     10: "Octobre",
@@ -14,6 +16,27 @@ MONTH_LABELS = {
     5: "Mai",
     6: "Juin",
 }
+
+
+def fee_annual_amount(fee):
+    if fee is None:
+        return Decimal("0.00")
+    if fee.nature == SchoolFee.Nature.TUITION and fee.mode == SchoolFee.Mode.MONTHLY:
+        return fee.montant * 9
+    return fee.montant
+
+
+def monthly_due_schedule(registration_fee, tuition_fee):
+    tuition_annual = fee_annual_amount(tuition_fee)
+    monthly_tuition = (
+        tuition_fee.montant
+        if tuition_fee and tuition_fee.mode == SchoolFee.Mode.MONTHLY
+        else (tuition_annual / 9).quantize(Decimal("0.01"))
+    )
+    dues = [monthly_tuition] * 9
+    dues[-1] += tuition_annual - sum(dues, Decimal("0.00"))
+    dues[0] += registration_fee
+    return dues
 
 
 def school_year_data(reference_date=None):

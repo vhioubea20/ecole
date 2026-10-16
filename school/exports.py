@@ -80,9 +80,9 @@ def build_school_workbook():
     _add_sheet(
         workbook,
         "Frais",
-        ["Classe", "Année scolaire", "Nature", "Montant"],
+        ["Classe", "Année scolaire", "Nature", "Mode", "Montant"],
         (
-            [fee.school_class.libelle, fee.annee, fee.get_nature_display(), fee.montant]
+            [fee.school_class.libelle, fee.annee, fee.get_nature_display(), fee.get_mode_display(), fee.montant]
             for fee in fees
         ),
     )

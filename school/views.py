@@ -14,7 +14,7 @@ from .forms import SchoolClassForm, SchoolFeeForm, StudentForm, StudentPaymentFo
 from .exports import build_school_workbook
 from .models import SchoolClass, SchoolFee, Student, StudentPayment
 from .receipts import build_payment_receipt
-from .services import school_year_data
+from .services import fee_annual_amount, monthly_due_schedule, school_year_data
 
 User = get_user_model()
 
@@ -164,7 +164,7 @@ def schooling_overview(request):
     money_field = DecimalField(max_digits=12, decimal_places=2)
     fee_by_class = {}
     for fee in SchoolFee.objects.filter(annee=year["school_year"]):
-        fee_by_class.setdefault(fee.school_class_id, {})[fee.nature] = fee.montant
+        fee_by_class.setdefault(fee.school_class_id, {})[fee.nature] = fee
     classes = SchoolClass.objects.annotate(
         student_count=Count("students", filter=Q(students__status=Student.Status.ACTIVE), distinct=True),
         total_paid=Coalesce(
@@ -183,8 +183,8 @@ def schooling_overview(request):
     rows = []
     for school_class in classes:
         class_fees = fee_by_class.get(school_class.pk, {})
-        registration_fee = class_fees.get(SchoolFee.Nature.REGISTRATION, Decimal("0.00"))
-        tuition_fee = class_fees.get(SchoolFee.Nature.TUITION, Decimal("0.00"))
+        registration_fee = fee_annual_amount(class_fees.get(SchoolFee.Nature.REGISTRATION))
+        tuition_fee = fee_annual_amount(class_fees.get(SchoolFee.Nature.TUITION))
         annual_fee = registration_fee + tuition_fee
         amount_due = annual_fee * school_class.student_count
         rows.append(
@@ -193,6 +193,11 @@ def schooling_overview(request):
                 "student_count": school_class.student_count,
                 "registration_fee": registration_fee,
                 "tuition_fee": tuition_fee,
+                "tuition_mode": (
+                    class_fees[SchoolFee.Nature.TUITION].get_mode_display()
+                    if SchoolFee.Nature.TUITION in class_fees
+                    else "—"
+                ),
                 "annual_fee": annual_fee,
                 "amount_due": amount_due,
                 "total_paid": school_class.total_paid,
@@ -213,16 +218,15 @@ def schooling_overview(request):
 def schooling_class_detail(request, pk):
     year = school_year_data()
     school_class = get_object_or_404(SchoolClass, pk=pk)
-    class_fees = {
-        fee.nature: fee.montant
-        for fee in SchoolFee.objects.filter(
-        school_class=school_class,
-        annee=year["school_year"],
-        )
+    fee_records = {
+        fee.nature: fee
+        for fee in SchoolFee.objects.filter(school_class=school_class, annee=year["school_year"])
     }
-    registration_fee = class_fees.get(SchoolFee.Nature.REGISTRATION, Decimal("0.00"))
-    tuition_fee = class_fees.get(SchoolFee.Nature.TUITION, Decimal("0.00"))
+    registration_fee = fee_annual_amount(fee_records.get(SchoolFee.Nature.REGISTRATION))
+    tuition_fee_record = fee_records.get(SchoolFee.Nature.TUITION)
+    tuition_fee = fee_annual_amount(tuition_fee_record)
     annual_fee = registration_fee + tuition_fee
+    monthly_dues = monthly_due_schedule(registration_fee, tuition_fee_record)
     money_field = DecimalField(max_digits=12, decimal_places=2)
     annotations = {
         "total_paid": Coalesce(
@@ -237,26 +241,25 @@ def schooling_class_detail(request, pk):
             output_field=money_field,
         )
     }
-    for month in year["months"]:
-        annotations[month["key"]] = Coalesce(
-            Sum(
-                "payments__montant",
-                filter=Q(
-                    payments__date_paiement__gte=month["start"],
-                    payments__date_paiement__lt=month["end"],
-                ),
-            ),
-            Value(Decimal("0.00")),
-            output_field=money_field,
-        )
     students = Student.objects.filter(school_class=school_class, status=Student.Status.ACTIVE).annotate(**annotations)
-    installment = (annual_fee / 9).quantize(Decimal("0.01"))
     rows = []
     for student in students:
+        remaining_payment = student.total_paid
+        monthly_payments = []
+        for due in monthly_dues:
+            paid = min(remaining_payment, due)
+            remaining_payment -= paid
+            if due > 0 and paid >= due:
+                state = "paid"
+            elif paid > 0:
+                state = "partial"
+            else:
+                state = "unpaid"
+            monthly_payments.append({"amount": paid, "state": state})
         rows.append(
             {
                 "student": student,
-                "monthly_amounts": [getattr(student, month["key"]) for month in year["months"]],
+                "monthly_payments": monthly_payments,
                 "total_paid": student.total_paid,
                 "amount_due": annual_fee,
                 "balance": max(Decimal("0.00"), annual_fee - student.total_paid),
@@ -273,7 +276,8 @@ def schooling_class_detail(request, pk):
             "annual_fee": annual_fee,
             "registration_fee": registration_fee,
             "tuition_fee": tuition_fee,
-            "monthly_installment": installment,
+            "tuition_mode": tuition_fee_record.get_mode_display() if tuition_fee_record else "—",
+            "monthly_installment": monthly_dues[0] - registration_fee,
             "total_due": annual_fee * len(rows),
             "total_paid": sum((row["total_paid"] for row in rows), Decimal("0.00")),
             "can_add_payment": request.user.is_staff or request.user.has_perm("school.add_studentpayment"),
@@ -292,15 +296,11 @@ def student_payment_detail(request, pk):
         date_paiement__lt=year["period_end"],
     ).aggregate(total=Sum("montant"))["total"] or Decimal("0.00")
     class_fees = {
-        fee.nature: fee.montant
-        for fee in SchoolFee.objects.filter(
-        school_class=student.school_class,
-        annee=year["school_year"],
-        )
+        fee.nature: fee
+        for fee in SchoolFee.objects.filter(school_class=student.school_class, annee=year["school_year"])
     }
-    amount_due = class_fees.get(SchoolFee.Nature.REGISTRATION, Decimal("0.00")) + class_fees.get(
-        SchoolFee.Nature.TUITION,
-        Decimal("0.00"),
+    amount_due = fee_annual_amount(class_fees.get(SchoolFee.Nature.REGISTRATION)) + fee_annual_amount(
+        class_fees.get(SchoolFee.Nature.TUITION)
     )
     return render(
         request,

@@ -11,7 +11,7 @@ class SchoolClassAdmin(admin.ModelAdmin):
 
 @admin.register(SchoolFee)
 class SchoolFeeAdmin(admin.ModelAdmin):
-    list_display = ("school_class", "annee", "nature", "montant")
+    list_display = ("school_class", "annee", "nature", "mode", "montant")
     list_filter = ("annee", "school_class")
 
 
