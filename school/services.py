@@ -26,7 +26,7 @@ def fee_annual_amount(fee):
     return fee.montant
 
 
-def monthly_due_schedule(registration_fee, tuition_fee):
+def monthly_due_schedule(tuition_fee):
     tuition_annual = fee_annual_amount(tuition_fee)
     monthly_tuition = (
         tuition_fee.montant
@@ -35,7 +35,6 @@ def monthly_due_schedule(registration_fee, tuition_fee):
     )
     dues = [monthly_tuition] * 9
     dues[-1] += tuition_annual - sum(dues, Decimal("0.00"))
-    dues[0] += registration_fee
     return dues
 
 

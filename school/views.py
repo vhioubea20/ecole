@@ -226,7 +226,7 @@ def schooling_class_detail(request, pk):
     tuition_fee_record = fee_records.get(SchoolFee.Nature.TUITION)
     tuition_fee = fee_annual_amount(tuition_fee_record)
     annual_fee = registration_fee + tuition_fee
-    monthly_dues = monthly_due_schedule(registration_fee, tuition_fee_record)
+    monthly_dues = monthly_due_schedule(tuition_fee_record)
     money_field = DecimalField(max_digits=12, decimal_places=2)
     annotations = {
         "total_paid": Coalesce(
@@ -244,7 +244,14 @@ def schooling_class_detail(request, pk):
     students = Student.objects.filter(school_class=school_class, status=Student.Status.ACTIVE).annotate(**annotations)
     rows = []
     for student in students:
-        remaining_payment = student.total_paid
+        registration_paid = min(student.total_paid, registration_fee)
+        remaining_payment = max(Decimal("0.00"), student.total_paid - registration_paid)
+        if registration_fee > 0 and registration_paid >= registration_fee:
+            registration_state = "paid"
+        elif registration_paid > 0:
+            registration_state = "partial"
+        else:
+            registration_state = "unpaid"
         monthly_payments = []
         for due in monthly_dues:
             paid = min(remaining_payment, due)
@@ -259,6 +266,7 @@ def schooling_class_detail(request, pk):
         rows.append(
             {
                 "student": student,
+                "registration_payment": {"amount": registration_paid, "state": registration_state},
                 "monthly_payments": monthly_payments,
                 "total_paid": student.total_paid,
                 "amount_due": annual_fee,
@@ -277,7 +285,7 @@ def schooling_class_detail(request, pk):
             "registration_fee": registration_fee,
             "tuition_fee": tuition_fee,
             "tuition_mode": tuition_fee_record.get_mode_display() if tuition_fee_record else "—",
-            "monthly_installment": monthly_dues[0] - registration_fee,
+            "monthly_installment": monthly_dues[0],
             "total_due": annual_fee * len(rows),
             "total_paid": sum((row["total_paid"] for row in rows), Decimal("0.00")),
             "can_add_payment": request.user.is_staff or request.user.has_perm("school.add_studentpayment"),

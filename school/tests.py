@@ -410,7 +410,9 @@ class SchoolAccessTests(TestCase):
         response = self.client.get(reverse("schooling_class_detail", args=[school_class.pk]))
 
         months = response.context["students"][0]["monthly_payments"]
-        self.assertEqual(months[0], {"amount": Decimal("15000.00"), "state": "paid"})
+        registration = response.context["students"][0]["registration_payment"]
+        self.assertEqual(registration, {"amount": Decimal("5000.00"), "state": "paid"})
+        self.assertEqual(months[0], {"amount": Decimal("10000.00"), "state": "paid"})
         self.assertEqual(months[1], {"amount": Decimal("3000.00"), "state": "partial"})
         self.assertEqual(months[2], {"amount": Decimal("0.00"), "state": "unpaid"})
 
@@ -457,9 +459,12 @@ class SchoolAccessTests(TestCase):
         student_response = self.client.get(reverse("student_payment_detail", args=[student.pk]))
 
         self.assertEqual(len(class_response.context["months"]), 9)
+        registration = class_response.context["students"][0]["registration_payment"]
+        self.assertEqual(registration["amount"], Decimal("10000.00"))
+        self.assertEqual(registration["state"], "paid")
         monthly_payments = class_response.context["students"][0]["monthly_payments"]
-        self.assertEqual(monthly_payments[0]["amount"], Decimal("10000.00"))
-        self.assertEqual(monthly_payments[0]["state"], "partial")
+        self.assertEqual(monthly_payments[0]["amount"], Decimal("0.00"))
+        self.assertEqual(monthly_payments[0]["state"], "unpaid")
         self.assertEqual(monthly_payments[1]["state"], "unpaid")
         self.assertEqual(class_response.context["annual_fee"], Decimal("100000.00"))
         self.assertEqual(student_response.context["total_paid"], Decimal("10000.00"))
