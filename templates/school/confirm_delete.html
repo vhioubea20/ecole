@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Confirmer la suppression · École{% endblock %}
+{% block content %}
+<div class="page-heading compact-heading"><div><p class="eyebrow">CONFIRMATION</p><h1>Supprimer cet élément ?</h1></div></div><section class="confirm-panel"><p>Cette action supprimera définitivement <strong>{{ object }}</strong>.</p><form method="post">{% csrf_token %}<div class="form-actions"><a class="button button-secondary" href="{% url cancel_url %}">Annuler</a><button class="button button-danger" type="submit">Confirmer la suppression</button></div></form></section>
+{% endblock %}

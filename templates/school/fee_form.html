@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Gestion scolaire{% endblock %}
+{% block content %}
+<div class="page-heading compact-heading"><div><p class="eyebrow">FINANCES SCOLAIRES</p><h1>{{ title }}</h1><p class="heading-note">Un montant par nature peut être défini pour chaque classe et année scolaire.</p></div></div>
+<form method="post" class="editor-form narrow-form">{% csrf_token %}{% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}<section class="form-section"><div class="form-grid">{% for field in form %}<div class="field field-full"><label for="{{ field.id_for_label }}">{{ field.label }}<span class="required-mark">*</span></label>{{ field }}{% if field.errors %}<span class="field-error">{{ field.errors|join:', ' }}</span>{% endif %}</div>{% endfor %}</div></section><div class="form-actions"><a class="button button-secondary" href="{% url 'fee_list' %}">Annuler</a>{% if fee %}<a class="button button-danger" href="{% url 'fee_delete' fee.pk %}">Supprimer</a>{% endif %}<button class="button button-primary" type="submit">Enregistrer</button></div></form>
+{% endblock %}

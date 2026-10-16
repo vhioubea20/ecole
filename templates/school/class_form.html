@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Gestion scolaire{% endblock %}
+{% block content %}
+<div class="page-heading compact-heading"><div><p class="eyebrow">ORGANISATION SCOLAIRE</p><h1>{{ title }}</h1><p class="heading-note">Le libellé est obligatoire.</p></div></div>
+<form method="post" class="editor-form narrow-form">{% csrf_token %}{% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}<section class="form-section"><div class="form-grid"><div class="field field-full"><label for="{{ form.libelle.id_for_label }}">Libellé<span class="required-mark">*</span></label>{{ form.libelle }}{% if form.libelle.errors %}<span class="field-error">{{ form.libelle.errors|join:', ' }}</span>{% endif %}</div></div></section><div class="form-actions"><a class="button button-secondary" href="{% url 'class_list' %}">Annuler</a>{% if school_class %}<a class="button button-danger" href="{% url 'class_delete' school_class.pk %}">Supprimer</a>{% endif %}<button class="button button-primary" type="submit">Enregistrer</button></div></form>
+{% endblock %}

@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Scolarité{% endblock %}
+{% block content %}
+<div class="page-heading compact-heading"><div><p class="eyebrow">SUIVI DES RÈGLEMENTS</p><h1>{{ title }}</h1><p class="heading-note">Renseignez la date, le matricule de l'élève et le montant reçu.</p></div></div>
+<form method="post" class="editor-form narrow-form">{% csrf_token %}{% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}<section class="form-section"><div class="form-grid">{% for field in form %}<div class="field field-full"><label for="{{ field.id_for_label }}">{{ field.label }}<span class="required-mark">*</span></label>{{ field }}{% if field.errors %}<span class="field-error">{{ field.errors|join:', ' }}</span>{% endif %}</div>{% endfor %}</div></section><div class="form-actions"><a class="button button-secondary" href="{% if payment %}{% url 'student_payment_detail' payment.student_id %}{% else %}{% url 'schooling_overview' %}{% endif %}">Annuler</a>{% if payment %}<a class="button button-danger" href="{% url 'student_payment_delete' payment.pk %}">Supprimer</a>{% endif %}<button class="button button-primary" type="submit">Enregistrer</button></div></form>
+{% endblock %}

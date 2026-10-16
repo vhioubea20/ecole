@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Classes · Gestion scolaire{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">ORGANISATION SCOLAIRE</p><h1>Classes</h1><p class="heading-note">Créer et gérer les classes de l'établissement.</p></div><a class="button button-primary" href="{% url 'class_create' %}"><span aria-hidden="true">＋</span> Ajouter une classe</a></div>
+<section class="section-block table-section">{% if classes %}<div class="table-wrap"><table><thead><tr><th>Libellé</th><th>Élèves inscrits</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>{% for school_class in classes %}<tr><td><strong>{{ school_class.libelle }}</strong></td><td>{{ school_class.student_count }}</td><td><div class="class-actions"><a class="button button-secondary" href="{% url 'class_update' school_class.pk %}">Modifier</a><a class="button button-danger" href="{% url 'class_delete' school_class.pk %}">Supprimer</a></div></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state"><span class="empty-symbol">▦</span><h3>Aucune classe enregistrée</h3><p>Ajoutez une classe pour pouvoir inscrire des élèves.</p><a class="button button-primary" href="{% url 'class_create' %}">Ajouter une classe</a></div>{% endif %}</section>
+{% endblock %}

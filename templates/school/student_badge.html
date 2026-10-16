@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Badge · {{ student.first_name }} {{ student.last_name }}{% endblock %}
+{% block content %}
+<div class="badge-toolbar no-print"><a class="button button-secondary" href="{% url 'student_list' %}">Retour aux élèves</a><button class="button button-primary" type="button" onclick="window.print()"><span aria-hidden="true">▣</span> Imprimer le badge</button></div>
+<article class="student-badge" aria-label="Badge de {{ student.first_name }} {{ student.last_name }}">
+  <header class="badge-header"><img src="{% static 'PKF Solution OK.png' %}" alt="Logo de l'établissement"><div><span class="badge-school-name">Établissement scolaire</span><h1>CARTE D'ÉLÈVE</h1></div><span class="badge-year">{{ student.enrollment_date|date:"Y" }}</span></header>
+  <div class="badge-body">
+    <section class="badge-information"><p class="badge-matricule">MATRICULE <strong>{{ student.matricule }}</strong></p><h2>{{ student.first_name }} {{ student.last_name }}</h2><dl><div><dt>Date de naissance</dt><dd>{% if student.date_of_birth %}{{ student.date_of_birth|date:"d/m/Y" }}{% else %}Non renseignée{% endif %}</dd></div><div><dt>Classe</dt><dd>{{ student.school_class.libelle }}</dd></div><div class="badge-address"><dt>Adresse</dt><dd>{{ student.address|default:"Non renseignée"|linebreaksbr }}</dd></div><div><dt>Personne responsable</dt><dd>{{ student.guardian_name|default:"Non renseignée" }}</dd></div><div><dt>Numéro</dt><dd>{{ student.guardian_phone|default:"Non renseigné" }}</dd></div></dl></section>
+    <aside class="badge-photo-frame">{% if student.photo %}<img src="{{ student.photo.url }}" alt="Photo de {{ student.first_name }} {{ student.last_name }}">{% else %}<span class="badge-photo-placeholder">{{ student.first_name|slice:":1"|upper }}{{ student.last_name|slice:":1"|upper }}</span>{% endif %}<span>PHOTO</span></aside>
+  </div>
+  <footer class="badge-footer"><span>Signature du Directeur</span><div class="director-signature" aria-label="Espace réservé à la signature du Directeur"></div></footer>
+</article>
+{% endblock %}

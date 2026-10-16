@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Supprimer un paiement · Scolarité{% endblock %}
+{% block content %}
+<div class="page-heading compact-heading"><div><p class="eyebrow">SUIVI DES RÈGLEMENTS</p><h1>Supprimer ce paiement ?</h1></div></div>
+<section class="confirm-panel"><p>Confirmer la suppression du paiement de <strong>{{ payment.montant|floatformat:2 }}</strong> du {{ payment.date_paiement|date:"d/m/Y" }} pour <strong>{{ payment.student }}</strong> ({{ payment.student.matricule }}) ?</p><form method="post">{% csrf_token %}<div class="form-actions"><a class="button button-secondary" href="{% url 'student_payment_detail' payment.student_id %}">Annuler</a><button class="button button-danger" type="submit">Supprimer</button></div></form></section>
+{% endblock %}

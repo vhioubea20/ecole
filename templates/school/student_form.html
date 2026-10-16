@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · École{% endblock %}
+{% block content %}
+<div class="page-heading compact-heading"><div><p class="eyebrow">DOSSIERS SCOLAIRES</p><h1>{{ title }}</h1><p class="heading-note">Les champs marqués d'un astérisque sont obligatoires.</p></div></div>
+<form method="post" enctype="multipart/form-data" class="editor-form">{% csrf_token %}{% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+  {% if student %}<div class="matricule-banner"><span>Matricule</span><strong>{{ student.matricule }}</strong></div>{% else %}<p class="form-hint">Le matricule sera généré automatiquement à l'enregistrement.</p>{% endif %}
+  <section class="form-section"><h2>Informations de l'élève</h2><div class="form-grid">
+    {% for field in form %}{% if field.name == 'first_name' or field.name == 'last_name' or field.name == 'date_of_birth' or field.name == 'school_class' %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="required-mark">*</span>{% endif %}</label>{{ field }}{% if field.errors %}<span class="field-error">{{ field.errors|join:', ' }}</span>{% endif %}</div>{% endif %}{% endfor %}
+    {% for field in form %}{% if field.name == 'address' or field.name == 'photo' %}<div class="field field-full"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="required-mark">*</span>{% endif %}</label>{{ field }}{% if field.name == 'photo' and student.photo %}<img class="student-photo-preview" src="{{ student.photo.url }}" alt="Photo de {{ student }}">{% endif %}{% if field.errors %}<span class="field-error">{{ field.errors|join:', ' }}</span>{% endif %}</div>{% endif %}{% endfor %}
+  </div></section>
+  <section class="form-section"><h2>Personne responsable <span class="optional-label">Facultatif</span></h2><div class="form-grid">
+    {% for field in form %}{% if field.name == 'guardian_name' or field.name == 'guardian_phone' or field.name == 'guardian_profession' %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.errors %}<span class="field-error">{{ field.errors|join:', ' }}</span>{% endif %}</div>{% endif %}{% endfor %}
+  </div></section>
+  <div class="form-actions"><a class="button button-secondary" href="{% url 'student_list' %}">Annuler</a><button class="button button-primary" type="submit">Enregistrer le dossier</button></div>
+</form>
+{% endblock %}

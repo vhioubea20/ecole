@@ -1,0 +1,48 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f5f2">
+  <title>{% block title %}École / Pilotage{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{% static 'PKF Solution OK.png' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+{% if request.user.is_authenticated %}
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="{% url 'dashboard' %}">
+        <img class="brand-logo" src="{% static 'PKF Solution OK.png' %}" alt="PKF Solution">
+        <span><strong>Gestion</strong><small>Scolaire</small></span>
+      </a>
+      <div class="nav-label">GESTION</div>
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><span class="nav-icon">⌂</span>Accueil</a>
+        {% if request.user.is_staff or perms.school.view_student %}<a href="{% url 'student_list' %}" class="nav-link {% if 'student' in request.resolver_match.url_name %}active{% endif %}"><span class="nav-icon">▤</span>Élèves</a>{% endif %}
+          {% if request.user.is_staff or perms.school.view_studentpayment %}<a href="{% url 'schooling_overview' %}" class="nav-link {% if 'schooling' in request.resolver_match.url_name or 'student_payment' in request.resolver_match.url_name %}active{% endif %}"><span class="nav-icon">◷</span>Scolarité</a>{% endif %}
+        {% if request.user.is_staff or perms.school.view_schoolclass %}<a href="{% url 'class_list' %}" class="nav-link {% if 'class_' in request.resolver_match.url_name %}active{% endif %}"><span class="nav-icon">▦</span>Classes</a>{% endif %}
+        {% if request.user.is_staff or perms.school.view_schoolfee %}<a href="{% url 'fee_list' %}" class="nav-link {% if 'fee_' in request.resolver_match.url_name %}active{% endif %}"><span class="nav-icon">¤</span>Frais</a>{% endif %}
+        {% if request.user.is_staff %}<a href="{% url 'user_list' %}" class="nav-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}"><span class="nav-icon">♙</span>Utilisateurs</a>{% endif %}
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="user-chip">{% if request.user.profile.photo %}<img class="avatar-photo" src="{{ request.user.profile.photo.url }}" alt="">{% else %}<span class="avatar">{{ request.user.first_name|default:request.user.username|slice:":1"|upper }}</span>{% endif %}<span class="user-chip-copy"><strong>{{ request.user.get_full_name|default:request.user.username }}</strong><small>{% if request.user.is_superuser %}Admin{% elif request.user.is_staff %}Admin{% else %}Utilisateur{% endif %}</small></span></div>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="logout-button" type="submit"><span class="nav-icon">↪</span>Déconnexion</button></form>
+      </div>
+    </aside>
+    <main class="main-area">
+      <header class="topbar"><span class="topbar-caption">ESPACE SCOLAIRE</span><span class="topbar-date">{% now "l j F Y" %}</span></header>
+      <div class="page-content">
+        {% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+        {% block content %}{% endblock %}
+      </div>
+      <footer class="footer">Gestion scolaire <span>·</span> Espace privé</footer>
+    </main>
+  </div>
+{% else %}
+  {% block auth_content %}{% endblock %}
+{% endif %}
+<script src="{% static 'js/password-toggle.js' %}" defer></script>
+</body>
+</html>
