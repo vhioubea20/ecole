@@ -11,15 +11,36 @@ class SchoolClassAdmin(admin.ModelAdmin):
 
 @admin.register(SchoolFee)
 class SchoolFeeAdmin(admin.ModelAdmin):
-    list_display = ("school_class", "annee", "nature", "mode", "montant")
+    list_display = (
+        "school_class",
+        "annee",
+        "nature",
+        "mode",
+        "nombre_echeances",
+        "tranche_standard_gne",
+        "derniere_tranche_gne",
+        "montant",
+    )
     list_filter = ("annee", "school_class")
+
+    @admin.display(description="Échéance standard (GNE)")
+    def tranche_standard_gne(self, fee):
+        return fee.montant_par_tranche
+
+    @admin.display(description="Dernière échéance (GNE)")
+    def derniere_tranche_gne(self, fee):
+        return fee.montant_derniere_tranche
 
 
 @admin.register(StudentPayment)
 class StudentPaymentAdmin(admin.ModelAdmin):
-    list_display = ("date_paiement", "student", "montant")
+    list_display = ("date_paiement", "student", "montant_gne")
     list_filter = ("date_paiement",)
     search_fields = ("student__matricule", "student__first_name", "student__last_name")
+
+    @admin.display(description="Montant (GNE)")
+    def montant_gne(self, payment):
+        return payment.montant
 
 
 @admin.register(Student)

@@ -1,6 +1,8 @@
 import unicodedata
+from decimal import Decimal, ROUND_DOWN
 
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -35,7 +37,12 @@ class SchoolFee(models.Model):
     annee = models.CharField("année scolaire", max_length=9)
     nature = models.CharField("nature", max_length=16, choices=Nature.choices, default=Nature.TUITION)
     mode = models.CharField("mode", max_length=8, choices=Mode.choices, default=Mode.ANNUAL)
-    montant = models.DecimalField("montant", max_digits=10, decimal_places=2)
+    montant = models.DecimalField("montant (GNE)", max_digits=10, decimal_places=2)
+    nombre_tranches = models.PositiveSmallIntegerField(
+        "nombre de tranches",
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(9)],
+    )
 
     class Meta:
         ordering = ["-annee", "school_class__libelle"]
@@ -50,10 +57,36 @@ class SchoolFee(models.Model):
                 condition=~models.Q(nature="inscription", mode="mensuel"),
                 name="registration_fee_must_be_annual",
             ),
+            models.CheckConstraint(
+                condition=models.Q(nombre_tranches__gte=1, nombre_tranches__lte=9),
+                name="school_fee_tranche_count_1_to_9",
+            ),
         ]
 
     def __str__(self):
         return f"{self.school_class.libelle} · {self.annee}"
+
+    @property
+    def nombre_echeances(self):
+        if self.nature == self.Nature.REGISTRATION:
+            return 1
+        if self.mode == self.Mode.MONTHLY:
+            return 9
+        return self.nombre_tranches
+
+    @property
+    def montant_par_tranche(self):
+        if self.nature != self.Nature.TUITION:
+            return self.montant
+        if self.mode == self.Mode.MONTHLY:
+            return self.montant
+        return (self.montant / self.nombre_echeances).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+
+    @property
+    def montant_derniere_tranche(self):
+        if self.nature != self.Nature.TUITION or self.mode == self.Mode.MONTHLY:
+            return self.montant_par_tranche
+        return self.montant - self.montant_par_tranche * (self.nombre_echeances - 1)
 
 
 class StudentPayment(models.Model):
@@ -64,7 +97,7 @@ class StudentPayment(models.Model):
         verbose_name="élève",
     )
     date_paiement = models.DateField("date")
-    montant = models.DecimalField("montant", max_digits=10, decimal_places=2)
+    montant = models.DecimalField("montant (GNE)", max_digits=10, decimal_places=2)
     created_at = models.DateTimeField("créé le", auto_now_add=True)
 
     class Meta:

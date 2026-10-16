@@ -124,6 +124,8 @@ table tfoot th { border-top: 1px solid var(--line); background: #f0f4f3; color: 
 .editor-form, .confirm-panel { background: #fff; border: 1px solid var(--line); border-radius: 5px; }
 .editor-form { padding: 24px 26px; }
 .matricule-banner { display: flex; align-items: center; justify-content: space-between; max-width: 330px; padding: 11px 14px; border-left: 3px solid var(--blue); border-radius: 4px; background: var(--blue-pale); }
+.tranche-preview { display: grid; gap: 5px; padding: 12px 14px; border-left: 3px solid var(--blue); border-radius: 4px; background: var(--blue-pale); color: var(--muted); font-size: 12px; }
+.tranche-preview strong { color: var(--sidebar-blue); font-size: 16px; }
 .matricule-banner span, .optional-label { color: var(--muted); font-size: 11px; }
 .matricule-banner strong { color: var(--blue); font-size: 15px; letter-spacing: .5px; }
 .form-hint { margin: 0 0 18px; color: var(--muted); font-size: 12px; }

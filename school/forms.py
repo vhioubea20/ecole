@@ -39,15 +39,17 @@ class SchoolClassForm(forms.ModelForm):
 
 class SchoolFeeForm(forms.ModelForm):
     annee = forms.ChoiceField(label="Année scolaire")
+    nombre_tranches = forms.IntegerField(label="Nombre de tranches", min_value=1, max_value=9, required=False)
 
     class Meta:
         model = SchoolFee
-        fields = ["annee", "school_class", "nature", "mode", "montant"]
+        fields = ["annee", "school_class", "nature", "mode", "montant", "nombre_tranches"]
         labels = {
             "school_class": "Classe",
             "nature": "Nature",
             "mode": "Mode de facturation",
-            "montant": "Montant",
+            "montant": "Montant (GNE)",
+            "nombre_tranches": "Nombre de tranches",
         }
         widgets = {
             "montant": forms.NumberInput(attrs={"min": "0.01", "step": "0.01"}),
@@ -65,6 +67,12 @@ class SchoolFeeForm(forms.ModelForm):
             years.insert(0, (self.instance.annee, self.instance.annee))
         self.fields["annee"].choices = years
         self.fields["mode"].help_text = "Pour les frais d'inscription, le mode doit rester annuel."
+        nature = self.data.get(self.add_prefix("nature"), self.instance.nature)
+        mode = self.data.get(self.add_prefix("mode"), self.instance.mode)
+        self.fields["nombre_tranches"].required = (
+            nature == SchoolFee.Nature.TUITION and mode == SchoolFee.Mode.ANNUAL
+        )
+        self.fields["nombre_tranches"].initial = self.instance.nombre_tranches or 1
 
     def clean(self):
         cleaned_data = super().clean()
@@ -73,6 +81,12 @@ class SchoolFeeForm(forms.ModelForm):
             and cleaned_data.get("mode") != SchoolFee.Mode.ANNUAL
         ):
             self.add_error("mode", "Les frais d'inscription sont facturés annuellement.")
+        if cleaned_data.get("nature") == SchoolFee.Nature.REGISTRATION:
+            cleaned_data["nombre_tranches"] = 1
+        elif cleaned_data.get("mode") == SchoolFee.Mode.MONTHLY:
+            cleaned_data["nombre_tranches"] = 9
+        elif not cleaned_data.get("nombre_tranches"):
+            self.add_error("nombre_tranches", "Indiquez le nombre de tranches pour le paiement annuel.")
         return cleaned_data
 
 
@@ -90,7 +104,7 @@ class StudentPaymentForm(forms.ModelForm):
     class Meta:
         model = StudentPayment
         fields = ["date_paiement", "student", "montant"]
-        labels = {"date_paiement": "Date", "montant": "Montant"}
+        labels = {"date_paiement": "Date", "montant": "Montant (GNE)"}
         widgets = {
             "date_paiement": forms.DateInput(attrs={"type": "date"}),
             "montant": forms.NumberInput(attrs={"min": "0.01", "step": "0.01"}),

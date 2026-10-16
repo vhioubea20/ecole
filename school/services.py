@@ -1,5 +1,5 @@
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 
 from django.utils import timezone
 
@@ -26,16 +26,22 @@ def fee_annual_amount(fee):
     return fee.montant
 
 
-def monthly_due_schedule(tuition_fee):
-    tuition_annual = fee_annual_amount(tuition_fee)
-    monthly_tuition = (
-        tuition_fee.montant
-        if tuition_fee and tuition_fee.mode == SchoolFee.Mode.MONTHLY
-        else (tuition_annual / 9).quantize(Decimal("0.01"))
-    )
-    dues = [monthly_tuition] * 9
-    dues[-1] += tuition_annual - sum(dues, Decimal("0.00"))
-    return dues
+def tuition_schedule(tuition_fee, months):
+    if tuition_fee and tuition_fee.mode == SchoolFee.Mode.ANNUAL:
+        return [
+            {
+                "label": f"Tranche {index + 1}",
+                "due": (
+                    tuition_fee.montant_derniere_tranche
+                    if index == tuition_fee.nombre_echeances - 1
+                    else tuition_fee.montant_par_tranche
+                ),
+            }
+            for index in range(tuition_fee.nombre_echeances)
+        ]
+
+    monthly_amount = tuition_fee.montant if tuition_fee else Decimal("0.00")
+    return [{"label": month["label"], "due": monthly_amount} for month in months]
 
 
 def school_year_data(reference_date=None):

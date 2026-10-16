@@ -1,6 +1,41 @@
 {% extends "base.html" %}
 {% block title %}{{ title }} · Gestion scolaire{% endblock %}
 {% block content %}
-<div class="page-heading compact-heading"><div><p class="eyebrow">FINANCES SCOLAIRES</p><h1>{{ title }}</h1><p class="heading-note">Pour les frais de scolarité, choisissez un montant annuel ou mensuel.</p></div></div>
-<form method="post" class="editor-form narrow-form">{% csrf_token %}{% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}<section class="form-section"><div class="form-grid">{% for field in form %}<div class="field field-full"><label for="{{ field.id_for_label }}">{{ field.label }}<span class="required-mark">*</span></label>{{ field }}{% if field.errors %}<span class="field-error">{{ field.errors|join:', ' }}</span>{% endif %}</div>{% endfor %}</div></section><div class="form-actions"><a class="button button-secondary" href="{% url 'fee_list' %}">Annuler</a>{% if fee %}<a class="button button-danger" href="{% url 'fee_delete' fee.pk %}">Supprimer</a>{% endif %}<button class="button button-primary" type="submit">Enregistrer</button></div></form>
+<div class="page-heading compact-heading"><div><p class="eyebrow">FINANCES SCOLAIRES</p><h1>{{ title }}</h1><p class="heading-note">Montant en GNE. Pour la scolarité annuelle, définissez le nombre de tranches.</p></div></div>
+<form method="post" class="editor-form narrow-form">{% csrf_token %}{% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}<section class="form-section"><div class="form-grid">{% for field in form %}<div class="field field-full" data-fee-field="{{ field.name }}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="required-mark">*</span>{% endif %}</label>{{ field }}{% if field.help_text %}<small class="help-text">{{ field.help_text }}</small>{% endif %}{% if field.errors %}<span class="field-error">{{ field.errors|join:', ' }}</span>{% endif %}</div>{% endfor %}<div class="tranche-preview field-full" data-tranche-preview hidden><span data-tranche-summary>Montant par tranche</span><strong data-tranche-amount>—</strong><small>La dernière tranche est ajustée au centime près si nécessaire.</small></div></div></section><div class="form-actions"><a class="button button-secondary" href="{% url 'fee_list' %}">Annuler</a>{% if fee %}<a class="button button-danger" href="{% url 'fee_delete' fee.pk %}">Supprimer</a>{% endif %}<button class="button button-primary" type="submit">Enregistrer</button></div></form>
+<script>
+(() => {
+	const nature = document.getElementById("id_nature");
+	const mode = document.getElementById("id_mode");
+	const amount = document.getElementById("id_montant");
+	const count = document.getElementById("id_nombre_tranches");
+	const countField = document.querySelector('[data-fee-field="nombre_tranches"]');
+	const preview = document.querySelector("[data-tranche-preview]");
+	const previewAmount = document.querySelector("[data-tranche-amount]");
+	const previewSummary = document.querySelector("[data-tranche-summary]");
+	const money = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+	function updateTranchePreview() {
+		const annualTuition = nature.value === "scolarite" && mode.value === "annuel";
+		countField.hidden = !annualTuition;
+		preview.hidden = !annualTuition;
+		const total = Number(amount.value);
+		const number = Number(count.value);
+		if (annualTuition && total > 0 && number > 0) {
+			const totalCents = Math.round(total * 100);
+			const baseCents = Math.floor(totalCents / number);
+			const lastCents = totalCents - baseCents * (number - 1);
+			previewSummary.textContent = number === 1 ? "Montant de l'unique tranche" : `Montant de chacune des ${number - 1} premières tranches`;
+			previewAmount.textContent = `${money.format(baseCents / 100)} GNE${number > 1 ? ` · Dernière : ${money.format(lastCents / 100)} GNE` : ""}`;
+		} else {
+			previewSummary.textContent = "Montant par tranche";
+			previewAmount.textContent = "—";
+		}
+	}
+
+	[nature, mode, amount, count].forEach((field) => field.addEventListener("input", updateTranchePreview));
+	[nature, mode].forEach((field) => field.addEventListener("change", updateTranchePreview));
+	updateTranchePreview();
+})();
+</script>
 {% endblock %}

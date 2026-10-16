@@ -219,6 +219,7 @@ class SchoolAccessTests(TestCase):
                 "annee": year,
                 "nature": SchoolFee.Nature.TUITION,
                 "mode": SchoolFee.Mode.ANNUAL,
+                "nombre_tranches": 1,
                 "montant": "120000.00",
             }
         )
@@ -260,6 +261,7 @@ class SchoolAccessTests(TestCase):
                 "annee": year,
                 "nature": SchoolFee.Nature.TUITION,
                 "mode": SchoolFee.Mode.ANNUAL,
+                "nombre_tranches": 1,
                 "montant": "120000.00",
             }
         )
@@ -285,6 +287,7 @@ class SchoolAccessTests(TestCase):
                 "annee": year,
                 "nature": SchoolFee.Nature.TUITION,
                 "mode": SchoolFee.Mode.ANNUAL,
+                "nombre_tranches": 1,
                 "montant": "100000.00",
             },
         )
@@ -298,6 +301,7 @@ class SchoolAccessTests(TestCase):
                 "annee": year,
                 "nature": SchoolFee.Nature.TUITION,
                 "mode": SchoolFee.Mode.ANNUAL,
+                "nombre_tranches": 1,
                 "montant": "125000.00",
             },
         )
@@ -343,7 +347,8 @@ class SchoolAccessTests(TestCase):
             school_class=school_class,
             annee=year["school_year"],
             nature=SchoolFee.Nature.TUITION,
-            montant="90000.00",
+            mode=SchoolFee.Mode.MONTHLY,
+            montant="10000.00",
         )
         first_student = Student.objects.create(first_name="Awa", last_name="Diallo", school_class=school_class)
         Student.objects.create(first_name="Moussa", last_name="Ba", school_class=school_class)
@@ -409,12 +414,41 @@ class SchoolAccessTests(TestCase):
 
         response = self.client.get(reverse("schooling_class_detail", args=[school_class.pk]))
 
-        months = response.context["students"][0]["monthly_payments"]
+        periods = response.context["students"][0]["period_payments"]
         registration = response.context["students"][0]["registration_payment"]
         self.assertEqual(registration, {"amount": Decimal("5000.00"), "state": "paid"})
-        self.assertEqual(months[0], {"amount": Decimal("10000.00"), "state": "paid"})
-        self.assertEqual(months[1], {"amount": Decimal("3000.00"), "state": "partial"})
-        self.assertEqual(months[2], {"amount": Decimal("0.00"), "state": "unpaid"})
+        self.assertEqual(periods[0], {"amount": Decimal("10000.00"), "state": "paid"})
+        self.assertEqual(periods[1], {"amount": Decimal("3000.00"), "state": "partial"})
+        self.assertEqual(periods[2], {"amount": Decimal("0.00"), "state": "unpaid"})
+
+    def test_annual_tuition_can_be_split_into_configured_tranches(self):
+        year = school_year_data()
+        school_class = SchoolClass.objects.create(libelle="CM1")
+        SchoolFee.objects.create(
+            school_class=school_class,
+            annee=year["school_year"],
+            nature=SchoolFee.Nature.TUITION,
+            mode=SchoolFee.Mode.ANNUAL,
+            montant="100000.00",
+            nombre_tranches=3,
+        )
+        student = Student.objects.create(first_name="Awa", last_name="Diallo", school_class=school_class)
+        StudentPayment.objects.create(
+            student=student,
+            date_paiement=date(year["start_year"], 10, 15),
+            montant="35000.00",
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("schooling_class_detail", args=[school_class.pk]))
+
+        periods = response.context["periods"]
+        payments = response.context["students"][0]["period_payments"]
+        self.assertEqual([period["label"] for period in periods], ["Tranche 1", "Tranche 2", "Tranche 3"])
+        self.assertEqual([period["due"] for period in periods], [Decimal("33333.33"), Decimal("33333.33"), Decimal("33333.34")])
+        self.assertEqual(payments[0], {"amount": Decimal("33333.33"), "state": "paid"})
+        self.assertEqual(payments[1], {"amount": Decimal("1666.67"), "state": "partial"})
+        self.assertEqual(payments[2], {"amount": Decimal("0.00"), "state": "unpaid"})
 
     def test_monthly_mode_is_only_valid_for_tuition(self):
         school_class = SchoolClass.objects.create(libelle="CP")
@@ -432,6 +466,28 @@ class SchoolAccessTests(TestCase):
 
         self.assertFalse(form.is_valid())
 
+    def test_annual_tuition_requires_tranche_count_and_displays_gne(self):
+        school_class = SchoolClass.objects.create(libelle="CM2")
+        year = SchoolFeeForm().fields["annee"].choices[0][0]
+        base_data = {
+            "school_class": school_class.pk,
+            "annee": year,
+            "nature": SchoolFee.Nature.TUITION,
+            "mode": SchoolFee.Mode.ANNUAL,
+            "montant": "100000.00",
+        }
+
+        missing_count = SchoolFeeForm(data=base_data)
+        self.assertFalse(missing_count.is_valid())
+
+        form = SchoolFeeForm(data={**base_data, "nombre_tranches": "3"})
+        self.assertTrue(form.is_valid(), form.errors)
+        fee = form.save()
+        self.assertEqual(fee.nombre_echeances, 3)
+        self.assertEqual(fee.montant_par_tranche, Decimal("33333.33"))
+        self.assertEqual(fee.montant_derniere_tranche, Decimal("33333.34"))
+        self.assertEqual(form.fields["montant"].label, "Montant (GNE)")
+
     def test_class_and_student_details_show_monthly_and_payment_history(self):
         year = school_year_data()
         school_class = SchoolClass.objects.create(libelle="CP")
@@ -445,7 +501,8 @@ class SchoolAccessTests(TestCase):
             school_class=school_class,
             annee=year["school_year"],
             nature=SchoolFee.Nature.TUITION,
-            montant="90000.00",
+            mode=SchoolFee.Mode.MONTHLY,
+            montant="10000.00",
         )
         student = Student.objects.create(first_name="Jean", last_name="Kone", school_class=school_class)
         StudentPayment.objects.create(
@@ -458,14 +515,14 @@ class SchoolAccessTests(TestCase):
         class_response = self.client.get(reverse("schooling_class_detail", args=[school_class.pk]))
         student_response = self.client.get(reverse("student_payment_detail", args=[student.pk]))
 
-        self.assertEqual(len(class_response.context["months"]), 9)
+        self.assertEqual(len(class_response.context["periods"]), 9)
         registration = class_response.context["students"][0]["registration_payment"]
         self.assertEqual(registration["amount"], Decimal("10000.00"))
         self.assertEqual(registration["state"], "paid")
-        monthly_payments = class_response.context["students"][0]["monthly_payments"]
-        self.assertEqual(monthly_payments[0]["amount"], Decimal("0.00"))
-        self.assertEqual(monthly_payments[0]["state"], "unpaid")
-        self.assertEqual(monthly_payments[1]["state"], "unpaid")
+        period_payments = class_response.context["students"][0]["period_payments"]
+        self.assertEqual(period_payments[0]["amount"], Decimal("0.00"))
+        self.assertEqual(period_payments[0]["state"], "unpaid")
+        self.assertEqual(period_payments[1]["state"], "unpaid")
         self.assertEqual(class_response.context["annual_fee"], Decimal("100000.00"))
         self.assertEqual(student_response.context["total_paid"], Decimal("10000.00"))
         self.assertEqual(student_response.context["amount_due"], Decimal("100000.00"))

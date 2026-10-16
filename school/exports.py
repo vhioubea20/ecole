@@ -80,9 +80,18 @@ def build_school_workbook():
     _add_sheet(
         workbook,
         "Frais",
-        ["Classe", "Année scolaire", "Nature", "Mode", "Montant"],
+        ["Classe", "Année scolaire", "Nature", "Mode", "Nombre d'échéances", "Montant saisi (GNE)", "Montant par tranche (GNE)", "Dernière tranche (GNE)"],
         (
-            [fee.school_class.libelle, fee.annee, fee.get_nature_display(), fee.get_mode_display(), fee.montant]
+            [
+                fee.school_class.libelle,
+                fee.annee,
+                fee.get_nature_display(),
+                fee.get_mode_display(),
+                fee.nombre_echeances,
+                fee.montant,
+                fee.montant_par_tranche,
+                fee.montant_derniere_tranche,
+            ]
             for fee in fees
         ),
     )
@@ -91,7 +100,7 @@ def build_school_workbook():
     _add_sheet(
         workbook,
         "Paiements",
-        ["Date", "Matricule", "Prénom", "Nom", "Classe", "Montant"],
+        ["Date", "Matricule", "Prénom", "Nom", "Classe", "Montant (GNE)"],
         (
             [
                 payment.date_paiement,

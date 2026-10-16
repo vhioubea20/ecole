@@ -15,7 +15,7 @@ PALE = colors.HexColor("#e8f2f7")
 
 
 def _format_amount(amount):
-    return f"{amount:,.2f}".replace(",", " ").replace(".", ",")
+    return f"{amount:,.2f}".replace(",", " ").replace(".", ",") + " GNE"
 
 
 def build_payment_receipt(payment):
@@ -83,7 +83,7 @@ def build_payment_receipt(payment):
     amount_y = panel_top - panel_height - 48
     document.setFillColor(MUTED)
     document.setFont("Helvetica", 10)
-    document.drawString(margin, amount_y, "MONTANT REÇU")
+    document.drawString(margin, amount_y, "MONTANT REÇU (GNE)")
     document.setFillColor(BLUE)
     document.setFont("Helvetica-Bold", 23)
     document.drawRightString(page_width - margin, amount_y - 2, _format_amount(payment.montant))
